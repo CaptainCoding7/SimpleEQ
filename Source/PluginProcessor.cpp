@@ -115,6 +115,108 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoeff;
     *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoeff;
 
+    auto cutCoeff = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(cs.lowCutFreq, sampleRate, 2*(cs.lowCutSlope+1)); 
+    
+    /*************** Left low cut **********************/
+
+    auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
+
+    leftLowCut.setBypassed<0>(true);
+    leftLowCut.setBypassed<1>(true);
+    leftLowCut.setBypassed<2>(true);
+    leftLowCut.setBypassed<3>(true);
+
+    switch (cs.lowCutSlope)
+    {
+        case Slope_12:
+        {
+            *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+            leftLowCut.setBypassed<0>(false);
+            break;
+        }
+        case Slope_24:
+        {
+            *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoeff[1];
+            leftLowCut.setBypassed<1>(false);
+            break;
+        }
+        case Slope_36:
+        {
+
+            *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoeff[1];
+            leftLowCut.setBypassed<1>(false);
+            *leftLowCut.get<2>().coefficients = *cutCoeff[2];
+            leftLowCut.setBypassed<2>(false);
+            break;
+        }
+        case Slope_48:
+        {
+            *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoeff[1];
+            leftLowCut.setBypassed<1>(false);
+            *leftLowCut.get<2>().coefficients = *cutCoeff[2];
+            leftLowCut.setBypassed<2>(false);
+            *leftLowCut.get<3>().coefficients = *cutCoeff[3];
+            leftLowCut.setBypassed<3>(false);
+            break;
+        }
+
+    }
+
+    /*************** right low cut **********************/
+
+    auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
+
+    rightLowCut.setBypassed<0>(true);
+    rightLowCut.setBypassed<1>(true);
+    rightLowCut.setBypassed<2>(true);
+    rightLowCut.setBypassed<3>(true);
+
+    switch (cs.lowCutSlope)
+    {
+        case Slope_12:
+        {
+            *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+            rightLowCut.setBypassed<0>(false);
+            break;
+        }
+        case Slope_24:
+        {
+            *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoeff[1];
+            rightLowCut.setBypassed<1>(false);
+            break;
+        }
+        case Slope_36:
+        {
+
+            *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoeff[1];
+            rightLowCut.setBypassed<1>(false);
+            *rightLowCut.get<2>().coefficients = *cutCoeff[2];
+            rightLowCut.setBypassed<2>(false);
+            break;
+        }
+        case Slope_48:
+        {
+            *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoeff[1];
+            rightLowCut.setBypassed<1>(false);
+            *rightLowCut.get<2>().coefficients = *cutCoeff[2];
+            rightLowCut.setBypassed<2>(false);
+            *rightLowCut.get<3>().coefficients = *cutCoeff[3];
+            rightLowCut.setBypassed<3>(false);
+            break;
+        }
+    }
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -172,8 +274,113 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         juce::Decibels::decibelsToGain(cs.peakGainInDecibels)
     );
 
+
     *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoeff;
     *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoeff;
+
+    auto cutCoeff = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(cs.lowCutFreq, getSampleRate(), 2 * (cs.lowCutSlope + 1));
+
+    /*************** Left low cut **********************/
+
+    auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
+
+    leftLowCut.setBypassed<0>(true);
+    leftLowCut.setBypassed<1>(true);
+    leftLowCut.setBypassed<2>(true);
+    leftLowCut.setBypassed<3>(true);
+
+    switch (cs.lowCutSlope)
+    {
+    case Slope_12:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+        leftLowCut.setBypassed<0>(false);
+        break;
+    }
+    case Slope_24:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoeff[1];
+        leftLowCut.setBypassed<1>(false);
+        break;
+    }
+    case Slope_36:
+    {
+
+        *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoeff[1];
+        leftLowCut.setBypassed<1>(false);
+        *leftLowCut.get<2>().coefficients = *cutCoeff[2];
+        leftLowCut.setBypassed<2>(false);
+        break;
+    }
+    case Slope_48:
+    {
+        *leftLowCut.get<0>().coefficients = *cutCoeff[0];
+        leftLowCut.setBypassed<0>(false);
+        *leftLowCut.get<1>().coefficients = *cutCoeff[1];
+        leftLowCut.setBypassed<1>(false);
+        *leftLowCut.get<2>().coefficients = *cutCoeff[2];
+        leftLowCut.setBypassed<2>(false);
+        *leftLowCut.get<3>().coefficients = *cutCoeff[3];
+        leftLowCut.setBypassed<3>(false);
+        break;
+    }
+
+    }
+
+    /*************** right low cut **********************/
+
+    auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
+
+    rightLowCut.setBypassed<0>(true);
+    rightLowCut.setBypassed<1>(true);
+    rightLowCut.setBypassed<2>(true);
+    rightLowCut.setBypassed<3>(true);
+
+    switch (cs.lowCutSlope)
+    {
+    case Slope_12:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+        rightLowCut.setBypassed<0>(false);
+        break;
+    }
+    case Slope_24:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoeff[1];
+        rightLowCut.setBypassed<1>(false);
+        break;
+    }
+    case Slope_36:
+    {
+
+        *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoeff[1];
+        rightLowCut.setBypassed<1>(false);
+        *rightLowCut.get<2>().coefficients = *cutCoeff[2];
+        rightLowCut.setBypassed<2>(false);
+        break;
+    }
+    case Slope_48:
+    {
+        *rightLowCut.get<0>().coefficients = *cutCoeff[0];
+        rightLowCut.setBypassed<0>(false);
+        *rightLowCut.get<1>().coefficients = *cutCoeff[1];
+        rightLowCut.setBypassed<1>(false);
+        *rightLowCut.get<2>().coefficients = *cutCoeff[2];
+        rightLowCut.setBypassed<2>(false);
+        *rightLowCut.get<3>().coefficients = *cutCoeff[3];
+        rightLowCut.setBypassed<3>(false);
+        break;
+    }
+    }
+
 
     juce::dsp::AudioBlock<float> block(buffer);
 
@@ -238,8 +445,8 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts) {
     cs.lowCutSlope = apvts.getRawParameterValue("LowCut Slope")->load();
     cs.highCutSlope = apvts.getRawParameterValue("HighCut Slope")->load();
     cs.peakFreq = apvts.getRawParameterValue("Peak Freq")->load();
-    cs.peakGainInDecibels = apvts.getRawParameterValue("Peak Gain")->load();
-    cs.peakQuality = apvts.getRawParameterValue("Peak Quality")->load();
+    cs.peakGainInDecibels = static_cast<Slope>(apvts.getRawParameterValue("Peak Gain")->load());
+    cs.peakQuality = static_cast<Slope>(apvts.getRawParameterValue("Peak Quality")->load());
     
 
     return cs;
