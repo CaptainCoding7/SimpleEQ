@@ -24,8 +24,8 @@ struct  ChainSettings
     float peakQuality{ 1.f };
     float lowCutFreq{ 0 };
     float highCutFreq{ 0 };
-    int lowCutSlope{ Slope::Slope_12 };
-    int highCutSlope{ Slope::Slope_12 };
+    Slope lowCutSlope{ Slope::Slope_12 };
+    Slope highCutSlope{ Slope::Slope_12 };
 };
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
@@ -82,9 +82,11 @@ public:
 
 
 private: 
+    //aliases
     using Filter = juce::dsp::IIR::Filter<float>;
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
     using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter > ;
+    using Coefficients = Filter::CoefficientsPtr;
 
     MonoChain leftChain, rightChain;
 
@@ -95,6 +97,13 @@ private:
         HighCut     
     };
 
+    ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
+    void updatePeakFilter(const ChainSettings& cs);
+    static void updateCoefficients(Coefficients &oldCoeffs, const Coefficients &newCoeffs);
+    template<typename ChainType, typename CoefficientType>
+    void updateCutFilter(ChainType& monoLowCut, const CoefficientType& cutCoeff, const Slope& lowCutSlope);
+    template<int Index, typename ChainType, typename CoefficientType>
+    void update(ChainType& chain, const CoefficientType& cutCoeff);
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
