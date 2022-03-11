@@ -26,6 +26,12 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
         addAndMakeVisible(comp);
     }
 
+    const auto& params = audioProcessor.getParameters();
+    for (auto param : params)
+        param->addListener(this);
+
+    startTimerHz(60);
+
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (600, 400);
@@ -33,6 +39,9 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 {
+    const auto& params = audioProcessor.getParameters();
+    for (auto param : params)
+        param->removeListener(this);
 }
 
 //==============================================================================
@@ -147,7 +156,14 @@ void SimpleEQAudioProcessorEditor::parameterValueChanged(int parameterIndex, flo
 void SimpleEQAudioProcessorEditor::timerCallback() {
 
     if (parametersChanged.compareAndSetBool(false,true)) {
-        //update the 
+
+        DBG("params changed :-)");
+        //update the monochain
+        auto cs = getChainSettings(audioProcessor.apvts);
+        auto peakCoeff = makePeakFilter(cs, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoeff);
+        //repaint the curve
+        repaint();
     }
 
 }
