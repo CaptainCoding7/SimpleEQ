@@ -43,9 +43,26 @@ enum ChainPositions
 };
 
 using Coefficients = Filter::CoefficientsPtr;
-static void updateCoefficients(Coefficients& oldCoeffs, const Coefficients& newCoeffs);
+void updateCoefficients(Coefficients& oldCoeffs, const Coefficients& newCoeffs);
 
 Coefficients makePeakFilter(const ChainSettings& cs, double sampleRate);
+
+template<typename ChainType, typename CoefficientType>
+void updateCutFilter(ChainType& monoLowCut, const CoefficientType& cutCoeff, const Slope& lowCutSlope);
+
+template<int Index, typename ChainType, typename CoefficientType>
+void update(ChainType& chain, const CoefficientType& cutCoeff);
+
+
+// inline functions in order to use them in files that include this header
+// nice explanation :o  : https://www.commentcamarche.net/faq/11250-les-inlines-en-c
+inline auto makeLowCutFilter(const ChainSettings& cs, double sampleRate) {
+    return juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(cs.lowCutFreq, sampleRate, 2 * (cs.lowCutSlope + 1));
+}
+
+inline auto makeHighCutFilter(const ChainSettings& cs, double sampleRate) {
+    return juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(cs.highCutFreq, sampleRate, 2 * (cs.highCutSlope + 1));
+}
 
 //==============================================================================
 /**
@@ -113,13 +130,7 @@ private:
     void updateHighCutFilter(const ChainSettings& cs);
     void updateLowCutFilter(const ChainSettings& cs);
 
-    template<typename ChainType, typename CoefficientType>
-    void updateCutFilter(ChainType& monoLowCut, const CoefficientType& cutCoeff, const Slope& lowCutSlope);
-
-    template<int Index, typename ChainType, typename CoefficientType>
-    void update(ChainType& chain, const CoefficientType& cutCoeff);
-
-
+   
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
 };
