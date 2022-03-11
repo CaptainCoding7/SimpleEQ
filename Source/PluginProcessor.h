@@ -98,12 +98,28 @@ private:
     };
 
     ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
+
+    /*
+     * Here is the call order:
+     * updateFilters -> updateHigh/LowCutFilter -> updateCutFilter -> update -> updateCoefficients
+     *               -> updatePeakFilter -> updateCoefficients
+     */
+
+    void updateFilters();
+
     void updatePeakFilter(const ChainSettings& cs);
-    static void updateCoefficients(Coefficients &oldCoeffs, const Coefficients &newCoeffs);
+
+    void updateHighCutFilter(const ChainSettings& cs);
+    void updateLowCutFilter(const ChainSettings& cs);
+
     template<typename ChainType, typename CoefficientType>
     void updateCutFilter(ChainType& monoLowCut, const CoefficientType& cutCoeff, const Slope& lowCutSlope);
+
     template<int Index, typename ChainType, typename CoefficientType>
     void update(ChainType& chain, const CoefficientType& cutCoeff);
+
+    static void updateCoefficients(Coefficients &oldCoeffs, const Coefficients &newCoeffs);
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
