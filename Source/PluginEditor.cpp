@@ -11,6 +11,9 @@
 
 /****************************** LookAndFeel Stuff *****************************/
 
+/* 
+ * We need to use a class that inherits from LookAndFeel_VX in order to draw inside the slider bounds
+ */
 void LookAndFeel::drawRotarySlider(juce::Graphics& g, 
                                    int x, 
                                    int y, 
@@ -44,8 +47,8 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 
         rect.setLeft(center.getX() - 2);
         rect.setRight(center.getX() + 2);
-        rect.setBottom(center.getY());
-        rect.setTop(bounds.getY() - rswl->getTextHeight()*1.5);
+        rect.setBottom(center.getY() - rswl->getTextHeight() * 1.5);
+        rect.setTop(bounds.getY() );
 
         path.addRoundedRectangle(rect, 2.f);
 
@@ -104,6 +107,34 @@ void RotarySliderWithLabels::paint(juce::Graphics& g)
         sliderBounds.getWidth(),
         sliderBounds.getHeight(),
         jmap(getValue(), range.getStart(), range.getEnd(), 0.0, 1.0), startAng, endAng, *this);
+
+
+    auto center = sliderBounds.toFloat().getCentre();
+    auto radius = sliderBounds.getWidth() * 0.5f;
+
+    g.setColour(Colour(0, 255, 204));
+    g.setFont(getTextHeight());
+
+    auto numchoices = labels.size();
+    for (int i = 0; i < numchoices; i++) {
+        auto pos = labels[i].pos;
+        jassert(pos <= 1.f);
+        jassert(0.f <= pos);
+
+        // We place the text of the min/max labels just below the circle defining the slider,
+        // near the corners of the slider box bounds
+        auto ang = jmap(pos, 0.f, 1.f, startAng, endAng);
+        auto c = center.getPointOnCircumference(radius + getTextHeight() * 0.5f + 1, ang);
+
+        Rectangle<float> rect;
+        auto str = labels[i].label;
+        rect.setSize(g.getCurrentFont().getStringWidth(str), getTextHeight());
+        rect.setCentre(c);
+        rect.setY(rect.getY() + getTextHeight());
+
+        g.drawFittedText(str, rect.toNearestInt(), juce::Justification::centred, 1);
+    }
+
         
 }
 
@@ -306,6 +337,27 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
       highCutSlopeSliderAttachment(audioProcessor.apvts, "HighCut Slope", highCutSlopeSlider)
 {
 
+    peakFreqSlider.labels.add({ 0.f, "20Hz" });
+    peakFreqSlider.labels.add({ 1.f, "20kHz" });
+
+    peakGainSlider.labels.add({ 0.f, "-24dB" });
+    peakGainSlider.labels.add({ 1.f, "+24dB" });
+
+    peakQualitySlider.labels.add({ 0.f, "0.1" });
+    peakQualitySlider.labels.add({ 1.f, "10.0" });
+
+    lowCutFreqSlider.labels.add({ 0.f, "20Hz" });
+    lowCutFreqSlider.labels.add({ 1.f, "20kHz" });
+
+    highCutFreqSlider.labels.add({ 0.f, "20Hz" });
+    highCutFreqSlider.labels.add({ 1.f, "20kHz" });
+
+    lowCutSlopeSlider.labels.add({ 0.f, "12dB/Oct" });
+    lowCutSlopeSlider.labels.add({ 1.f, "48dB/Oct" });
+
+    highCutSlopeSlider.labels.add({ 0.f, "12dB/Oct" });
+    highCutSlopeSlider.labels.add({ 1.f, "48dB/Oct" });
+
     for (auto* comp : getComps())
     {
         addAndMakeVisible(comp);
@@ -313,7 +365,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (600, 400);
+    setSize (600, 480);
 }
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
@@ -332,9 +384,14 @@ void SimpleEQAudioProcessorEditor::resized()
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     auto bounds = getLocalBounds();
-    auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
+    
+    float hRatio = 25.f / 100.f;
+    // hRatio = JUCE_LIVE_CONSTANT(33) / 100.f; //DEBUG 
+    auto responseArea = bounds.removeFromTop(bounds.getHeight() * hRatio);
 
     rcc.setBounds(responseArea);
+
+    bounds.removeFromTop(5);
 
     auto lowCutArea = bounds.removeFromLeft(bounds.getWidth() * 0.33);
     auto highCutArea = bounds.removeFromRight(bounds.getWidth() * 0.5);
