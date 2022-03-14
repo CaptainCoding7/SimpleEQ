@@ -22,21 +22,19 @@ struct CustomRotarySlider : juce::Slider
 };
 
 
-//==============================================================================
-/**
-*/
-class SimpleEQAudioProcessorEditor  : public juce::AudioProcessorEditor, 
+/*
+ * We used the SimpleEQAudioProcessorEditor class as a model to 
+ * write our ResponseCurveComponent class below 
+ */
+struct ResponseCurveComponent : juce::Component,
     juce::AudioProcessorParameter::Listener,
     juce::Timer
 {
-public:
-    SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor&);
-    ~SimpleEQAudioProcessorEditor() override;
+    ResponseCurveComponent(SimpleEQAudioProcessor&);
+    ~ResponseCurveComponent();
 
     //==============================================================================
-    void paint (juce::Graphics&) override;
-    void resized() override;
-      
+
     void parameterValueChanged(int parameterIndex, float newValue) override;
 
     /** Indicates that a parameter change gesture has started.
@@ -52,18 +50,39 @@ public:
         to trigger an AsyncUpdater or ChangeBroadcaster which you can respond to later on the
         message thread.
     */
-    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override{}
+    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {}
 
     void timerCallback() override;
 
+    void paint(juce::Graphics&) override;
 
+private:
+    SimpleEQAudioProcessor& audioProcessor;
+    // atomic flag
+    juce::Atomic<bool> parametersChanged{ false };
+    MonoChain monoChain;
+
+};
+
+
+//==============================================================================
+/**
+*/
+class SimpleEQAudioProcessorEditor  : public juce::AudioProcessorEditor
+{
+public:
+    SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor&);
+    ~SimpleEQAudioProcessorEditor() override;
+
+    //==============================================================================
+    void paint (juce::Graphics&) override;
+    void resized() override;
+      
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     SimpleEQAudioProcessor& audioProcessor;
 
-    // atomic flag
-    juce::Atomic<bool> parametersChanged { false };
 
     CustomRotarySlider peakFreqSlider,
                        peakGainSlider,
@@ -72,6 +91,9 @@ private:
                        highCutFreqSlider,
                        lowCutSlopeSlider,
                        highCutSlopeSlider;
+
+    // An instance of ResponsCurveComponent as an attribute of the SimpleEQAudioProcessorEditor class
+    ResponseCurveComponent rcc;
 
     using apvts = juce::AudioProcessorValueTreeState;
     using Attachment = apvts::SliderAttachment;
@@ -85,8 +107,6 @@ private:
         highCutSlopeSliderAttachment;
 
     std::vector<juce::Component*> getComps();
-
-    MonoChain monoChain;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessorEditor)
 };
