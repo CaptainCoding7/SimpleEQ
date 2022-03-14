@@ -23,6 +23,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 {
     using namespace juce;
 
+    /* Drawing a slider with colours */
     auto bounds = Rectangle<float>(x, y, width, height);
     g.setColour(Colour(50, 162, 168));
     g.fillEllipse(bounds);
@@ -30,14 +31,17 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
     g.setColour(Colour(0, 0, 149));
     g.drawEllipse(bounds, 1.f);
 
+    // we just check that it's a RotarySliderWithLabels slider
     if (auto* rswl = dynamic_cast<RotarySliderWithLabels*>(&slider))
     {
 
         auto center = bounds.getCentre();
-
         Path path;
-
+        
+        /* Creating the hand (aiguille) in the slider */
+     
         Rectangle<float> rect;
+
         rect.setLeft(center.getX() - 2);
         rect.setRight(center.getX() + 2);
         rect.setBottom(center.getY());
@@ -52,6 +56,8 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
         path.applyTransform(AffineTransform().rotated(sliderAngRad, center.getX(), center.getY()));
         g.fillPath(path);
 
+        /* We set the value text appearence */
+
         g.setFont(rswl->getTextHeight());
         auto text = rswl->getDisplayString();
         auto strWidth = g.getCurrentFont().getStringWidth(text);
@@ -64,7 +70,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 
         g.setColour(Colours::white);
         g.drawFittedText(text, rect.toNearestInt(), juce::Justification::centred, 1 );
-
+        
     
     }
 
@@ -76,17 +82,21 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 void RotarySliderWithLabels::paint(juce::Graphics& g) 
 {
     using namespace juce;
+
     auto startAng = degreesToRadians(180.f + 45.f);
     auto endAng = degreesToRadians(180.f - 45.f) + MathConstants<float>::twoPi;
     auto range = getRange();
 
     auto sliderBounds = getSliderBounds();
 
-    g.setColour(Colour(185, 0, 0));
-    g.drawRect(getLocalBounds());
-    g.setColour(Colour(0, 77, 230));
-    g.drawRect(sliderBounds);
 
+    /* We set the colours of our local bounds and slider bounds */
+    //g.setColour(Colour(185, 0, 0));
+    //g.drawRect(getLocalBounds());
+    //g.setColour(Colour(0, 77, 230));
+    //g.drawRect(sliderBounds);
+
+    /* We use this fonction to draw our sliders (see above) */
     getLookAndFeel().drawRotarySlider(
         g,
         sliderBounds.getX(),
@@ -114,7 +124,37 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
 
 juce::String RotarySliderWithLabels::getDisplayString() const
 {
-    return juce::String(getValue());
+
+    if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(param))
+        return choiceParam->getCurrentChoiceName();
+    
+    juce::String str;
+    bool addK = false;
+
+    if (auto* floatParam = dynamic_cast<juce::AudioParameterFloat*>(param))
+    {
+        float val = getValue();
+        if (val > 999)
+        {
+            val /= 1000.f;
+            addK = true;
+        }
+
+        str = juce::String(val, (addK ? 2 : 0));
+
+    }
+    else {
+        jassertfalse;
+    }
+
+    if (suffix.isNotEmpty())
+    {
+        str << " ";
+            if(addK)
+                str << "k";
+            str << suffix;
+    }
+    return str;
 }
 
 
