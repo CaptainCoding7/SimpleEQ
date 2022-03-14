@@ -32,7 +32,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
     g.fillEllipse(bounds);
     
     g.setColour(Colour(0, 0, 149));
-    g.drawEllipse(bounds, 1.f);
+    g.drawEllipse(bounds, 2.f);
 
     // we just check that it's a RotarySliderWithLabels slider
     if (auto* rswl = dynamic_cast<RotarySliderWithLabels*>(&slider))
@@ -253,10 +253,12 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
     //g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 
     g.fillAll(juce::Colours::black);
+    g.drawImage(background, getLocalBounds().toFloat());
 
-    auto responseArea = getLocalBounds();
-    //auto bounds = getLocalBounds();
-    //auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
+
+    //auto responseArea = getLocalBounds();
+    //auto responseArea = getRenderArea();
+    auto responseArea = getAnalysisArea();
     auto width = responseArea.getWidth();
 
     auto& lowCut = monoChain.get<ChainPositions::LowCut>();
@@ -317,13 +319,94 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
     }
 
     g.setColour(juce::Colours::orange);
-    g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.4);
+    g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 1.4);
 
     g.setColour(juce::Colours::white);
     g.strokePath(responseCurve, juce::PathStrokeType(2.f));
 
 }
 
+void ResponseCurveComponent::resized() 
+{
+    using namespace juce;
+    background = Image(Image::PixelFormat::RGB, getWidth(), getHeight(), true);
+    Graphics g(background);
+
+    //frequencie lines
+    Array<float> freqs
+    {
+        20, 30, 40, 50, 100,
+        200, 300, 400, 500, 1000,
+        2000, 3000, 4000, 5000, 10000,
+        20000
+    };
+
+    auto renderArea = getAnalysisArea();
+    auto left = renderArea.getX();
+    auto right = renderArea.getRight();
+    auto top = renderArea.getY();
+    auto bottom = renderArea.getBottom();
+    auto width = renderArea.getWidth();
+
+    Array<float> xs;
+    for (auto f : freqs)
+    {
+        auto normX = mapFromLog10(f, 20.f, 20000.f);
+        xs.add(left + width * normX);
+    }
+
+    g.setColour(Colours::dimgrey);
+    for (auto xs : xs)
+    {
+        //auto normX = mapFromLog10(f, 20.f, 20000.f);
+        //g.drawVerticalLine(getWidth() * normX, 0.f, getHeight());
+        g.drawVerticalLine(xs, top, bottom);
+    
+    }
+
+    // gain lines
+    Array<float> gains
+    {
+        -24, -12, 0, 12, 24
+    };
+
+
+   
+    g.setColour(Colours::white);
+    for (auto g_dB : gains)
+    {
+        auto y = jmap(g_dB, -24.f, 24.f, float(bottom), float(top));
+        g.setColour(g_dB == 0.f ? Colour(0, 0, 149) : Colours::darkgrey);
+        g.drawHorizontalLine(y, left, right);
+    }
+
+    //g.drawRect(getRenderArea());
+    //g.drawRect(getAnalysisArea());
+
+
+}
+
+juce::Rectangle<int> ResponseCurveComponent::getRenderArea()
+{
+    auto bounds = getLocalBounds();
+    
+    //bounds.reduce(10,//JUCE_LIVE_CONSTANT(5), 
+    //              8);//JUCE_LIVE_CONSTANT(5));
+
+    bounds.removeFromTop(12);
+    bounds.removeFromBottom(2);
+    bounds.removeFromLeft(20);
+    bounds.removeFromRight(20);
+    return bounds;
+}
+
+juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea()
+{
+    auto bounds = getRenderArea();
+    bounds.removeFromTop(4);
+    bounds.removeFromBottom(4);
+    return bounds;
+}
 
 //==============================================================================
 SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcessor& p)

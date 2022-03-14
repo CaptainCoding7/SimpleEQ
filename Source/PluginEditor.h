@@ -89,12 +89,19 @@ struct ResponseCurveComponent : juce::Component,
 
     void updateChain();
 
+
 private:
     SimpleEQAudioProcessor& audioProcessor;
     // atomic flag
     juce::Atomic<bool> parametersChanged{ false };
+
     MonoChain monoChain;
 
+    // fonction used to manage visual render
+    juce::Image background;
+    void resized() override;
+    juce::Rectangle<int> getRenderArea();
+    juce::Rectangle<int> getAnalysisArea();
 };
 
 
