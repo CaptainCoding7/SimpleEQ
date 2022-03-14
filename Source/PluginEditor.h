@@ -87,6 +87,8 @@ struct ResponseCurveComponent : juce::Component,
 
     void paint(juce::Graphics&) override;
 
+    void updateChain();
+
 private:
     SimpleEQAudioProcessor& audioProcessor;
     // atomic flag
