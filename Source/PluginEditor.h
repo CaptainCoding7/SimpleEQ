@@ -68,7 +68,7 @@ public:
         fftDataFifo.prepare(fftData.size());
     }
     int getFFTSize() const { return 1 << order; }
-    int getNumAvailableFFTDataBlocks() const { return fftDataFifo.pull(fftData); }
+    int getNumAvailableFFTDataBlocks() const { return fftDataFifo.getNumAvailableForReading(); }
     bool getFFTData(BlockType& fftData) { return fftDataFifo.pull(fftData); }
 
 private:
@@ -80,8 +80,61 @@ private:
     Fifo<BlockType> fftDataFifo;
 };
 
+template<typename PathType>
+class AnalyzerPathGenerator
+{
+public: 
+
+    /* Converts renderData[] into a juce::Path */
+    void generatePath(const std::vector<float>& renderData,
+        juce::Rectangle<float> fftBounds,
+        int fftSize,
+        float binWidth,
+        float negInf)
+    {
+        auto top = fftBounds.getY();
+        auto bottom = fftBounds.getHeight();
+        auto width = fftBounds.getWidth();
+
+        int nbBins = (int)fftSize / 2;
+
+        PathType p;
+        p.preallocateSpace(3 * (int)fftBounds.getWidth());
+
+        auto map = [bottom, top, negInf](float v)
+        {
+            return juce::jmap(v, negInf, 0.f, float(bottom), top);
+        };
+        auto y = map(renderData[0]);
+
+        jassert(!std::isnan(y) && !std::isinf(y));
+
+        p.startNewSubPath(0, y);
+
+        const int pathResolution = 2;
+        for (int binNum = 1; binNum < nbBins; binNum += pathResolution)
+        {
+            y = map(renderData[binNum]);
+            jassert(!std::isnan(y) && !std::isinf(y));
+            if (!std::isnan(y) && !std::isinf(y))
+            {
+                auto binFreq = binNum * binWidth;
+                auto normalzedBinX = juce::mapFromLog10(binFreq, 1.f, 20000.f);
+                int binX = std::floor(normalzedBinX * width);
+                p.lineTo(binX, y);
+            }
+        }
+        pathFifo.push(p);
+    }
 
 
+    int getNumPathsAvailable() const { return pathFifo.getNumAvailableForReading(); }
+    bool getPath(PathType& path) { return pathFifo.pull(path); }
+
+private:
+    Fifo<PathType> pathFifo;
+
+};
 
 struct LookAndFeel : juce::LookAndFeel_V4 
 {
@@ -177,10 +230,10 @@ private:
     // converting audio samples into FFT data with :
     SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* leftChannelFifo;
     //SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* rightChannelFifo;
-
     juce::AudioBuffer<float> monoBuffer;
-
     FFTDataGenerator<std::vector<float>> leftChannelFFTDataGenerator;
+    AnalyzerPathGenerator<juce::Path> pathProducer;
+
 };
 
 
