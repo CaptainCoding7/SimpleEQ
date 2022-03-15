@@ -257,7 +257,25 @@ private:
 //==============================================================================
 
 struct PowerButton : juce::ToggleButton{};
-struct AnalyzerButton : juce::ToggleButton{};
+struct AnalyzerButton : juce::ToggleButton
+{
+    void resized() override
+    {
+        auto bounds = getLocalBounds();
+        auto insetRect = bounds.reduced(4);
+        
+        randomPath.clear();
+        juce::Random rand;
+        auto startY = insetRect.getY() + insetRect.getHeight() * rand.nextFloat();
+        randomPath.startNewSubPath(insetRect.getX(), startY);
+
+        for (auto x = insetRect.getX() + 1; x < insetRect.getRight(); x += 2)
+        {
+            randomPath.lineTo(x, insetRect.getY() + insetRect.getHeight() * rand.nextFloat());
+        }
+    }
+    juce::Path randomPath;
+};
 
 class SimpleEQAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
