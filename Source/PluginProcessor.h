@@ -176,6 +176,10 @@ struct  ChainSettings
     float highCutFreq{ 0 };
     Slope lowCutSlope{ Slope::Slope_12 };
     Slope highCutSlope{ Slope::Slope_12 };
+
+    bool lowCutBypassed{ false };
+    bool highCutBypassed{ false };
+    bool peakBypassed{ false };
 };
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
