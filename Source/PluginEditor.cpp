@@ -11,7 +11,9 @@
 
 const auto lightBlue = juce::Colour(50, 162, 168);
 const auto blue = juce::Colour(0, 0, 149);
+const auto lightpink = juce::Colours::pink;
 const auto pink = juce::Colour(255, 94, 174);
+const auto lightgreen = juce::Colour(118, 239, 154);
 
 /****************************** LookAndFeel Stuff *****************************/
 
@@ -35,6 +37,8 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
     g.setColour(lightBlue);
     g.fillEllipse(bounds);
     
+    g.setColour(juce::Colours::white);
+    g.drawEllipse(bounds, 4.f);
     g.setColour(blue);
     g.drawEllipse(bounds, 2.f);
 
@@ -207,16 +211,12 @@ order of 2048
 
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : 
     audioProcessor(p),
-    leftChannelFifo(&audioProcessor.leftChannelFifo)
-
-    //rightChannelFifo(&audioProcessor.rightChannelFifo)
+    leftPathProducer(audioProcessor.leftChannelFifo),
+    rightPathProducer(audioProcessor.rightChannelFifo)
 {
     const auto& params = audioProcessor.getParameters();
     for (auto param : params)
         param->addListener(this);
-
-    leftChannelFFTDataGenerator.changeOrder(FFTOrder::order2048);
-    monoBuffer.setSize(1, leftChannelFFTDataGenerator.getFFTSize());
 
     updateChain(); 
 
@@ -237,13 +237,13 @@ void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float new
 
 }
 
-void ResponseCurveComponent::timerCallback() 
+void PathProducer::process(juce::Rectangle<float> fftBounds, double sampleRate)
 {
     juce::AudioBuffer<float> tmpIncomingBuffer;
 
-    while (leftChannelFifo->getNumCompleteBufferAvailable() > 0)
+    while (monoChannelFifo->getNumCompleteBufferAvailable() > 0)
     {
-        if (leftChannelFifo->getAudioBuffer(tmpIncomingBuffer))
+        if (monoChannelFifo->getAudioBuffer(tmpIncomingBuffer))
         {
             //shifting over the data
             auto size = tmpIncomingBuffer.getNumSamples();
@@ -256,33 +256,43 @@ void ResponseCurveComponent::timerCallback()
                 size);
 
             //sending monoBuffer to the fft generator 
-            leftChannelFFTDataGenerator.produceFFTDataForRendering(monoBuffer, -48.f);
+            monoChannelFFTDataGenerator.produceFFTDataForRendering(monoBuffer, -48.f);
 
             // turns those fft blocks into a Path instance
         }
     }
-    const auto fftBounds = getAnalysisArea().toFloat();
-    const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
+    const auto fftSize = monoChannelFFTDataGenerator.getFFTSize();
     // as mentionned above, 48000 / 2048 ~ 23Hz
-    const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
+    const auto binWidth = sampleRate / (double)fftSize;
 
     // if there are fft date buffers to pull
-    while(leftChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
+    while (monoChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
     {
         std::vector<float> fftData;
         // if we can pull a buffer
-        if (leftChannelFFTDataGenerator.getFFTData(fftData))
+        if (monoChannelFFTDataGenerator.getFFTData(fftData))
         {
 
             // generate a path
             pathProducer.generatePath(fftData, fftBounds, fftSize, binWidth, -48.f);
         }
     }
-    
+
     while (pathProducer.getNumPathsAvailable())
     {
-        pathProducer.getPath(leftChannelFFTPath);
+        pathProducer.getPath(monoChannelFFTPath);
     }
+}
+
+
+void ResponseCurveComponent::timerCallback() 
+{
+    
+    auto fftBounds = getAnalysisArea().toFloat();
+    auto sampleRate = audioProcessor.getSampleRate();
+
+    leftPathProducer.process(fftBounds, sampleRate);
+    rightPathProducer.process(fftBounds, sampleRate);
 
     if (parametersChanged.compareAndSetBool(false, true)) {
 
@@ -378,9 +388,15 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
     }
 
     //paint the FFT Spectrum
+    auto leftChannelFFTPath = leftPathProducer.getPath();
     leftChannelFFTPath.applyTransform(juce::AffineTransform().translation(responseArea.getX(), responseArea.getY()));
-    g.setColour(juce::Colours::pink);
+    g.setColour(pink);
     g.strokePath(leftChannelFFTPath, juce::PathStrokeType(1.f));
+
+    auto rightChannelFFTPath = rightPathProducer.getPath();
+    rightChannelFFTPath.applyTransform(juce::AffineTransform().translation(responseArea.getX(), responseArea.getY()));
+    g.setColour(lightpink);
+    g.strokePath(rightChannelFFTPath, juce::PathStrokeType(1.f));
 
     g.setColour(blue);
     g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 1.4);

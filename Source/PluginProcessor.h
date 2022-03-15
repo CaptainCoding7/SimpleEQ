@@ -262,6 +262,10 @@ public:
 
     juce::AudioProcessorValueTreeState apvts{ *this, nullptr,"Parameters", createParameterLayout() };
 
+    using BlockType = juce::AudioBuffer<float>;
+    SingleChannelSampleFifo<BlockType> leftChannelFifo{ Channel::Left };
+    SingleChannelSampleFifo<BlockType> rightChannelFifo{ Channel::Right };
+
 
 private: 
 
@@ -279,6 +283,8 @@ private:
 
     void updateHighCutFilter(const ChainSettings& cs);
     void updateLowCutFilter(const ChainSettings& cs);
+
+    juce::dsp::Oscillator<float> osc;
 
    
     //==============================================================================

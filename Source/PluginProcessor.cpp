@@ -108,6 +108,15 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 
     updateFilters();
 
+    leftChannelFifo.prepare(samplesPerBlock);
+    rightChannelFifo.prepare(samplesPerBlock);
+
+    // debuging with an oscillator
+    osc.initialise([](float x) {return std::sin(x);});
+    spec.numChannels = getTotalNumOutputChannels();
+    osc.prepare(spec);
+    osc.setFrequency(200);
+
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -164,6 +173,11 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
 
     juce::dsp::AudioBlock<float> block(buffer);
 
+    ////oscillator stuff
+    //buffer.clear();
+    //juce::dsp::ProcessContextReplacing<float> stereoContext(block);
+    //osc.process(stereoContext);
+
     auto leftBlock = block.getSingleChannelBlock(0);
     auto rightBlock = block.getSingleChannelBlock(1);
 
@@ -173,19 +187,9 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     leftChain.process(leftContext);
     rightChain.process(rightContext);
 
+    leftChannelFifo.update(buffer);
+    rightChannelFifo.update(buffer);
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
 }
 
 //==============================================================================

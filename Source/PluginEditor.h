@@ -176,6 +176,26 @@ private:
     juce::String suffix;
 };
 
+class PathProducer
+{
+public: 
+    PathProducer(SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>& scsf) :
+        monoChannelFifo(&scsf) 
+    {
+        monoChannelFFTDataGenerator.changeOrder(FFTOrder::order2048);
+        monoBuffer.setSize(1, monoChannelFFTDataGenerator.getFFTSize());
+    }
+    void process(juce::Rectangle<float> fftBounds, double sampleRate);
+    juce::Path getPath() { return monoChannelFFTPath; }
+
+private:
+    // converting audio samples into FFT data with :
+    SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* monoChannelFifo;
+    juce::AudioBuffer<float> monoBuffer;
+    FFTDataGenerator<std::vector<float>> monoChannelFFTDataGenerator;
+    AnalyzerPathGenerator<juce::Path> pathProducer;
+    juce::Path monoChannelFFTPath;
+};
 
 /*
  * We used the SimpleEQAudioProcessorEditor class as a model to 
@@ -227,13 +247,7 @@ private:
     juce::Rectangle<int> getRenderArea();
     juce::Rectangle<int> getAnalysisArea();
 
-    // converting audio samples into FFT data with :
-    SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* leftChannelFifo;
-    //SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* rightChannelFifo;
-    juce::AudioBuffer<float> monoBuffer;
-    FFTDataGenerator<std::vector<float>> leftChannelFFTDataGenerator;
-    AnalyzerPathGenerator<juce::Path> pathProducer;
-    juce::Path leftChannelFFTPath;
+    PathProducer leftPathProducer, rightPathProducer;
 };
 
 
