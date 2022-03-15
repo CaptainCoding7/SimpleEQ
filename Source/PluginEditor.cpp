@@ -9,6 +9,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+const auto lightBlue = juce::Colour(50, 162, 168);
+const auto blue = juce::Colour(0, 0, 149);
+
 /****************************** LookAndFeel Stuff *****************************/
 
 /* 
@@ -28,10 +31,10 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 
     /* Drawing a slider with colours */
     auto bounds = Rectangle<float>(x, y, width, height);
-    g.setColour(Colour(50, 162, 168));
+    g.setColour(lightBlue);
     g.fillEllipse(bounds);
     
-    g.setColour(Colour(0, 0, 149));
+    g.setColour(blue);
     g.drawEllipse(bounds, 2.f);
 
     // we just check that it's a RotarySliderWithLabels slider
@@ -93,7 +96,7 @@ void RotarySliderWithLabels::paint(juce::Graphics& g)
     auto sliderBounds = getSliderBounds();
 
 
-    /* We set the colours of our local bounds and slider bounds */
+    /* We set the colours of our local bounds and slider bounds (visual debug) */
     //g.setColour(Colour(185, 0, 0));
     //g.drawRect(getLocalBounds());
     //g.setColour(Colour(0, 77, 230));
@@ -246,18 +249,9 @@ void ResponseCurveComponent::updateChain() {
 
 void ResponseCurveComponent::paint(juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    //g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    //g.setColour(juce::Colours::white);
-    //g.setFont(15.0f);
-    //g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
-
     g.fillAll(juce::Colours::black);
     g.drawImage(background, getLocalBounds().toFloat());
 
-
-    //auto responseArea = getLocalBounds();
-    //auto responseArea = getRenderArea();
     auto responseArea = getAnalysisArea();
     auto width = responseArea.getWidth();
 
@@ -333,11 +327,12 @@ void ResponseCurveComponent::resized()
     Graphics g(background);
 
     //frequencie lines
+
     Array<float> freqs
     {
-        20, 30, 40, 50, 100,
-        200, 300, 400, 500, 1000,
-        2000, 3000, 4000, 5000, 10000,
+        20, /*30, 40,*/ 50, 100,
+        200, /*300, 400,*/ 500, 1000,
+        2000, /*3000, 4000,*/ 5000, 10000,
         20000
     };
 
@@ -358,31 +353,83 @@ void ResponseCurveComponent::resized()
     g.setColour(Colours::dimgrey);
     for (auto xs : xs)
     {
-        //auto normX = mapFromLog10(f, 20.f, 20000.f);
-        //g.drawVerticalLine(getWidth() * normX, 0.f, getHeight());
         g.drawVerticalLine(xs, top, bottom);
     
     }
 
-    // gain lines
+    // freq labels
+
+    g.setColour(Colours::lightgrey);
+    const int fontHeight = 10;
+    g.setFont(fontHeight);
+
+    for (int i = 0; i < freqs.size(); i++)
+    {
+        auto f = freqs[i];
+        auto x = xs[i];
+
+        bool addK = false;
+        String str;
+        if (f > 999.f)
+        {
+            addK = true;
+            f /= 1000.f;
+        }
+        str << f;
+        if (addK)
+            str << "k";
+        str << "Hz";
+
+        auto textWidth = g.getCurrentFont().getStringWidth(str);
+        Rectangle<int> rect;
+        rect.setSize(textWidth, fontHeight);
+        rect.setCentre(x, 0);
+        rect.setY(1);
+
+        g.drawFittedText(str, rect, Justification::centred, 1);
+    }
+
+    // gain lines and labels
+
     Array<float> gains
     {
         -24, -12, 0, 12, 24
     };
 
-
-   
     g.setColour(Colours::white);
     for (auto g_dB : gains)
     {
+        // gain lines
         auto y = jmap(g_dB, -24.f, 24.f, float(bottom), float(top));
-        g.setColour(g_dB == 0.f ? Colour(0, 0, 149) : Colours::darkgrey);
+        g.setColour(g_dB == 0.f ? lightBlue : Colours::darkgrey);
         g.drawHorizontalLine(y, left, right);
+
+        // gain right labels
+        String str;
+        if (g_dB > 0)
+            str << "+";
+        str << g_dB;
+
+        g.setColour(g_dB == 0.f ? lightBlue : Colours::lightgrey);
+        auto textWidth = g.getCurrentFont().getStringWidth(str);
+        Rectangle<int> rect;
+        rect.setSize(textWidth, fontHeight);
+        rect.setX(getWidth() - textWidth);
+        rect.setCentre(rect.getCentreX(), y);
+        g.drawFittedText(str, rect, Justification::centred, 1);
+
+        // gain left labels
+        str.clear();
+        str << (g_dB - 24.f);
+
+        rect.setX(1);
+        textWidth = g.getCurrentFont().getStringWidth(str);
+        rect.setSize(textWidth, fontHeight);
+        g.drawFittedText(str, rect, Justification::centred, 1);
+
+
     }
-
-    //g.drawRect(getRenderArea());
-    //g.drawRect(getAnalysisArea());
-
+   
 
 }
 
