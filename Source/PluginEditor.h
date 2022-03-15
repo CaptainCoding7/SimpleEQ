@@ -233,6 +233,8 @@ struct ResponseCurveComponent : juce::Component,
     void timerCallback() override;
 
     void paint(juce::Graphics&) override;
+    void resized() override;
+    void toggleAnalysisEnablement(bool enabled) { shouldShowFFTAnalysis = enabled; }
 
     void updateChain();
 
@@ -246,11 +248,12 @@ private:
 
     // fonction used to manage visual render
     juce::Image background;
-    void resized() override;
     juce::Rectangle<int> getRenderArea();
     juce::Rectangle<int> getAnalysisArea();
 
     PathProducer leftPathProducer, rightPathProducer;
+
+    bool shouldShowFFTAnalysis = true;
 };
 
 
