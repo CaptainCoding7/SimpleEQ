@@ -20,15 +20,15 @@ const auto lightgreen = juce::Colour(118, 239, 154);
 /* 
  * We need to use a class that inherits from LookAndFeel_VX in order to draw inside the slider bounds
  */
-void LookAndFeel::drawRotarySlider(juce::Graphics& g, 
-                                   int x, 
-                                   int y, 
-                                   int width, 
-                                   int height,
-                                   float sliderPosProportional, 
-                                   float rotaryStartAngle,
-                                   float rotaryEndAngle, 
-                                   juce::Slider& slider)
+void LookAndFeel::drawRotarySlider(juce::Graphics& g,
+    int x,
+    int y,
+    int width,
+    int height,
+    float sliderPosProportional,
+    float rotaryStartAngle,
+    float rotaryEndAngle,
+    juce::Slider& slider)
 {
     using namespace juce;
 
@@ -36,7 +36,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
     auto bounds = Rectangle<float>(x, y, width, height);
     g.setColour(lightBlue);
     g.fillEllipse(bounds);
-    
+
     g.setColour(juce::Colours::white);
     g.drawEllipse(bounds, 4.f);
     g.setColour(blue);
@@ -48,15 +48,15 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 
         auto center = bounds.getCentre();
         Path path;
-        
+
         /* Creating the hand (aiguille) in the slider */
-     
+
         Rectangle<float> rect;
 
         rect.setLeft(center.getX() - 2);
         rect.setRight(center.getX() + 2);
         rect.setBottom(center.getY() - rswl->getTextHeight() * 1.5);
-        rect.setTop(bounds.getY() );
+        rect.setTop(bounds.getY());
 
         path.addRoundedRectangle(rect, 2.f);
 
@@ -73,20 +73,49 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
         auto text = rswl->getDisplayString();
         auto strWidth = g.getCurrentFont().getStringWidth(text);
 
-        rect.setSize(strWidth + 4, rswl->getTextHeight() + 2); 
+        rect.setSize(strWidth + 4, rswl->getTextHeight() + 2);
         rect.setCentre(bounds.getCentre());
 
         g.setColour(Colours::black);
         g.fillRect(rect);
 
         g.setColour(Colours::white);
-        g.drawFittedText(text, rect.toNearestInt(), juce::Justification::centred, 1 );
-        
-    
+        g.drawFittedText(text, rect.toNearestInt(), juce::Justification::centred, 1);
+
+
     }
+}
+
+void LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggleButton,
+    bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+{
+    using namespace juce;
+
+    Path powerButton;
+    auto bounds = toggleButton.getLocalBounds();
+    auto size = juce::jmin(bounds.getWidth(), bounds.getHeight()) - 6;
+
+    auto rect = bounds.withSizeKeepingCentre(size, size).toFloat();
+    float ang = 30.f;
+    size -= 6;
+
+    powerButton.addCentredArc(rect.getCentreX(), rect.getCentreY(), size * 0.5, size * 0.5, 
+        0.f, degreesToRadians(ang), degreesToRadians(360.f - ang), true);
+
+    powerButton.startNewSubPath(rect.getCentreX(), rect.getY());
+    powerButton.lineTo(rect.getCentre());
+
+    PathStrokeType pst(2.f, PathStrokeType::JointStyle::curved);
+    auto colorButton = toggleButton.getToggleState() ? Colours::dimgrey : lightgreen;
+    g.setColour(colorButton);
+    g.drawEllipse(rect, 2.f);
+    g.strokePath(powerButton, pst);
+
+    // + set up the hit test region for the buttons
 
 
 }
+
 
 /****************************** RotarySliderWithLabels stuff *****************************/
 
@@ -606,6 +635,11 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
         addAndMakeVisible(comp);
     }
 
+    peakBypassButton.setLookAndFeel(&lnf);
+    lowCutBypassButton.setLookAndFeel(&lnf);
+    highCutBypassButton.setLookAndFeel(&lnf);
+
+
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (600, 480);
@@ -613,6 +647,9 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 {
+    peakBypassButton.setLookAndFeel(nullptr);
+    lowCutBypassButton.setLookAndFeel(nullptr);
+    highCutBypassButton.setLookAndFeel(nullptr);
 }
 
 //==============================================================================
