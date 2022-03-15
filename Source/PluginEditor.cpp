@@ -193,11 +193,29 @@ juce::String RotarySliderWithLabels::getDisplayString() const
 
 
 /****************************** ResponseCurveComponent stuff *****************************/
+/*
+ * Splitting up the audio spectrum from 20 Hz to 20 kHz
+ * into 2048 equally sized freq bins
+ * A bin store a magnitude level for a particular range of freq
+Sample rate = 48 kHz
+order of 2048
+==> a bin covers 23 Hz 
+==> a lot of resolution at the upper end not at the bottom end
 
-ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p) {
+*/
+
+ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : 
+    audioProcessor(p),
+    leftChannelFifo(&audioProcessor.leftChannelFifo)
+
+    //rightChannelFifo(&audioProcessor.rightChannelFifo)
+{
     const auto& params = audioProcessor.getParameters();
     for (auto param : params)
         param->addListener(this);
+
+    leftChannelFFTDataGenerator.changeOrder(FFTOrder::order2048);
+    monoBuffer.setSize(1, leftChannelFFTDataGenerator.getFFTSize());
 
     updateChain(); 
 
@@ -218,7 +236,47 @@ void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float new
 
 }
 
-void ResponseCurveComponent::timerCallback() {
+void ResponseCurveComponent::timerCallback() 
+{
+    juce::AudioBuffer<float> tmpIncomingBuffer;
+
+    while (leftChannelFifo->getNumCompleteBufferAvailable() > 0)
+    {
+        if (leftChannelFifo->getAudioBuffer(tmpIncomingBuffer))
+        {
+            //shifting over the data
+            auto size = tmpIncomingBuffer.getNumSamples();
+            juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, 0),
+                                              monoBuffer.getReadPointer(0, size),
+                                              monoBuffer.getNumSamples() - size);
+            // copy the data to the end
+            juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, monoBuffer.getNumSamples() - size),
+                tmpIncomingBuffer.getReadPointer(0,0),
+                size);
+
+            //sending monoBuffer to the fft generator 
+            leftChannelFFTDataGenerator.produceFFTDataForRendering(monoBuffer, -48.f);
+
+            // turns those fft blocks into a Path instance
+        }
+        const auto fftBounds = getAnalysisArea().toFloat();
+        const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
+        // as mentionned above, 48000 / 2048 ~ 23Hz
+        const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
+
+        // if there are fft date buffers to pull
+        while(leftChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
+        {
+            std::vector<float> fftData;
+            // if we can pull a buffer
+            if (leftChannelFFTDataGenerator.getFFTData(fftData))
+            {
+
+                // generate a path
+                pathProducer.generatePath(fftData, fftBounds, fftSize, binWidth, -48.f);
+            }
+        }
+    }
 
     if (parametersChanged.compareAndSetBool(false, true)) {
 
@@ -418,7 +476,7 @@ void ResponseCurveComponent::resized()
         rect.setCentre(rect.getCentreX(), y);
         g.drawFittedText(str, rect, Justification::centred, 1);
 
-        // gain left labels
+        // gain left labels (analyser dB marks)
         str.clear();
         str << (g_dB - 24.f);
 
