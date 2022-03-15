@@ -11,6 +11,7 @@
 
 const auto lightBlue = juce::Colour(50, 162, 168);
 const auto blue = juce::Colour(0, 0, 149);
+const auto pink = juce::Colour(255, 94, 174);
 
 /****************************** LookAndFeel Stuff *****************************/
 
@@ -247,11 +248,11 @@ void ResponseCurveComponent::timerCallback()
             //shifting over the data
             auto size = tmpIncomingBuffer.getNumSamples();
             juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, 0),
-                                              monoBuffer.getReadPointer(0, size),
-                                              monoBuffer.getNumSamples() - size);
+                monoBuffer.getReadPointer(0, size),
+                monoBuffer.getNumSamples() - size);
             // copy the data to the end
             juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, monoBuffer.getNumSamples() - size),
-                tmpIncomingBuffer.getReadPointer(0,0),
+                tmpIncomingBuffer.getReadPointer(0, 0),
                 size);
 
             //sending monoBuffer to the fft generator 
@@ -259,23 +260,28 @@ void ResponseCurveComponent::timerCallback()
 
             // turns those fft blocks into a Path instance
         }
-        const auto fftBounds = getAnalysisArea().toFloat();
-        const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
-        // as mentionned above, 48000 / 2048 ~ 23Hz
-        const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
+    }
+    const auto fftBounds = getAnalysisArea().toFloat();
+    const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
+    // as mentionned above, 48000 / 2048 ~ 23Hz
+    const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
 
-        // if there are fft date buffers to pull
-        while(leftChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
+    // if there are fft date buffers to pull
+    while(leftChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
+    {
+        std::vector<float> fftData;
+        // if we can pull a buffer
+        if (leftChannelFFTDataGenerator.getFFTData(fftData))
         {
-            std::vector<float> fftData;
-            // if we can pull a buffer
-            if (leftChannelFFTDataGenerator.getFFTData(fftData))
-            {
 
-                // generate a path
-                pathProducer.generatePath(fftData, fftBounds, fftSize, binWidth, -48.f);
-            }
+            // generate a path
+            pathProducer.generatePath(fftData, fftBounds, fftSize, binWidth, -48.f);
         }
+    }
+    
+    while (pathProducer.getNumPathsAvailable())
+    {
+        pathProducer.getPath(leftChannelFFTPath);
     }
 
     if (parametersChanged.compareAndSetBool(false, true)) {
@@ -286,8 +292,9 @@ void ResponseCurveComponent::timerCallback()
         updateChain();
 
         //repaint the curve
-        repaint();
+        //repaint();
     }
+    repaint();
 
 }
 
@@ -370,7 +377,12 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
         responseCurve.lineTo(responseArea.getX() + i, map(mags[i]));
     }
 
-    g.setColour(juce::Colours::orange);
+    //paint the FFT Spectrum
+    leftChannelFFTPath.applyTransform(juce::AffineTransform().translation(responseArea.getX(), responseArea.getY()));
+    g.setColour(juce::Colours::pink);
+    g.strokePath(leftChannelFFTPath, juce::PathStrokeType(1.f));
+
+    g.setColour(blue);
     g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 1.4);
 
     g.setColour(juce::Colours::white);

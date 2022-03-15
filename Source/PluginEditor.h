@@ -119,7 +119,7 @@ public:
             if (!std::isnan(y) && !std::isinf(y))
             {
                 auto binFreq = binNum * binWidth;
-                auto normalzedBinX = juce::mapFromLog10(binFreq, 1.f, 20000.f);
+                auto normalzedBinX = juce::mapFromLog10(binFreq, 20.f, 20000.f);
                 int binX = std::floor(normalzedBinX * width);
                 p.lineTo(binX, y);
             }
@@ -233,7 +233,7 @@ private:
     juce::AudioBuffer<float> monoBuffer;
     FFTDataGenerator<std::vector<float>> leftChannelFFTDataGenerator;
     AnalyzerPathGenerator<juce::Path> pathProducer;
-
+    juce::Path leftChannelFFTPath;
 };
 
 
