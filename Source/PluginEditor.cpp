@@ -34,12 +34,14 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 
     /* Drawing a slider with colours */
     auto bounds = Rectangle<float>(x, y, width, height);
-    g.setColour(lightBlue);
+    auto enabled = slider.isEnabled();
+
+    g.setColour(enabled ? lightBlue : Colours::darkgrey);
     g.fillEllipse(bounds);
 
-    g.setColour(juce::Colours::white);
+    g.setColour(enabled ? Colours::white : Colours::lightgrey);
     g.drawEllipse(bounds, 4.f);
-    g.setColour(blue);
+    g.setColour(enabled ? blue : Colours::grey);
     g.drawEllipse(bounds, 2.f);
 
     // we just check that it's a RotarySliderWithLabels slider
@@ -124,18 +126,7 @@ void LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggle
         g.setColour(colorButton);
         auto bounds = toggleButton.getLocalBounds();
         g.drawRect(bounds);
-        
-        //auto insetRect = bounds.reduced(4);
-        
-        //Path randomPath;
-        //Random rand;
-        //auto startY = insetRect.getY() + insetRect.getHeight() * rand.nextFloat();
-        //randomPath.startNewSubPath(insetRect.getX(), startY);
 
-        //for (auto x = insetRect.getX() +1; x < insetRect.getRight(); x+=2)
-        //{
-        //    randomPath.lineTo(x, insetRect.getY() + insetRect.getHeight() * rand.nextFloat());
-        //}
         g.strokePath(ab->randomPath, PathStrokeType(1.f));
     }
 }
@@ -663,6 +654,39 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
     lowCutBypassButton.setLookAndFeel(&lnf);
     highCutBypassButton.setLookAndFeel(&lnf);
     analyzerEnabledButton.setLookAndFeel(&lnf);
+
+    // a safe pointer to make sure that our class is still inexistant when we use the toggle buttons
+    auto safePtr = juce::Component::SafePointer<SimpleEQAudioProcessorEditor>(this);
+    peakBypassButton.onClick = [safePtr]()
+    {
+        if (auto* comp = safePtr.getComponent())
+        {
+            auto bypassed = comp->peakBypassButton.getToggleState();
+            comp->peakFreqSlider.setEnabled(!bypassed);
+            comp->peakGainSlider.setEnabled(!bypassed);
+            comp->peakQualitySlider.setEnabled(!bypassed);
+        }
+    };
+
+    lowCutBypassButton.onClick = [safePtr]()
+    {
+        if (auto* comp = safePtr.getComponent())
+        {
+            auto bypassed = comp->lowCutBypassButton.getToggleState();
+            comp->lowCutFreqSlider.setEnabled(!bypassed);
+            comp->lowCutSlopeSlider.setEnabled(!bypassed);
+        }
+    };
+
+    highCutBypassButton.onClick = [safePtr]()
+    {
+        if (auto* comp = safePtr.getComponent())
+        {
+            auto bypassed = comp->highCutBypassButton.getToggleState();
+            comp->highCutFreqSlider.setEnabled(!bypassed);
+            comp->highCutSlopeSlider.setEnabled(!bypassed);
+        }
+    };
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
