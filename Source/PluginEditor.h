@@ -12,6 +12,77 @@
 #include "PluginProcessor.h"
 
 
+enum FFTOrder
+{
+    order2048 = 11, 
+    order4096=12,
+    order8192=13
+};
+
+template<typename BlockType>
+class FFTDataGenerator
+{
+public:
+    /*
+     * produces the FFT data from an audio buffer
+     */
+    void produceFFTDataForRendering(const juce::AudioBuffer<float>& audioData, const float negInfinity) 
+    {
+        const auto fftSize = getFFTSize();
+        fftData.assign(fftData.size(), 0);
+        auto* readIndex = audioData.getReadPointer(0);
+        std::copy(readIndex, readIndex + fftSize, fftData.begin());
+
+        //first apply a windowing function to our data
+        window->multiplyWithWindowingTable(fftData.data(), fftSize);
+
+        //then render our fft data
+        forwardFFT->performFrequencyOnlyForwardTransform(fftData.data());
+
+        int nbBins = (int)fftSize / 2;
+        for (size_t i = 0; i < nbBins; i++)
+        {
+            //normalize the fft values
+            fftData[i] /= (float)nbBins;
+            //convert them to decibels
+            fftData[i] = juce::Decibels::gainToDecibels(fftData[i], negInfinity);
+        }
+        fftDataFifo.push(fftData);
+
+    }
+
+    void changeOrder(FFTOrder newOrder)
+    {
+        //when you change order, recreate the window, forwardFFT, fifo, fftData
+        // + reset the fifoIndex
+        // things that need recreating should be created on the heap with std::make_unique<>
+
+        order = newOrder;
+        auto fftSize = getFFTSize();
+
+        forwardFFT = std::make_unique<juce::dsp::FFT>(order);
+        window = std::make_unique<juce::dsp::WindowingFunction<float>>(fftSize, juce::dsp::WindowingFunction<float>::blackmanHarris);
+
+        fftData.clear();
+        fftData.resize(fftSize * 2, 0);
+        fftDataFifo.prepare(fftData.size());
+    }
+    int getFFTSize() const { return 1 << order; }
+    int getNumAvailableFFTDataBlocks() const { return fftDataFifo.pull(fftData); }
+    bool getFFTData(BlockType& fftData) { return fftDataFifo.pull(fftData); }
+
+private:
+    FFTOrder order;
+    BlockType fftData;
+    std::unique_ptr<juce::dsp::FFT> forwardFFT;
+    std::unique_ptr<juce::dsp::WindowingFunction<float>> window;
+
+    Fifo<BlockType> fftDataFifo;
+};
+
+
+
+
 struct LookAndFeel : juce::LookAndFeel_V4 
 {
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,
@@ -102,6 +173,14 @@ private:
     void resized() override;
     juce::Rectangle<int> getRenderArea();
     juce::Rectangle<int> getAnalysisArea();
+
+    // converting audio samples into FFT data with :
+    SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* leftChannelFifo;
+    //SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* rightChannelFifo;
+
+    juce::AudioBuffer<float> monoBuffer;
+
+    FFTDataGenerator<std::vector<float>> leftChannelFFTDataGenerator;
 };
 
 
