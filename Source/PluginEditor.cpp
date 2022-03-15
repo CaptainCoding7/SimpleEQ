@@ -91,29 +91,52 @@ void LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggle
 {
     using namespace juce;
 
-    Path powerButton;
-    auto bounds = toggleButton.getLocalBounds();
-    auto size = juce::jmin(bounds.getWidth(), bounds.getHeight()) - 6;
+    if (auto* pb = dynamic_cast<PowerButton*>(&toggleButton))
+    {
 
-    auto rect = bounds.withSizeKeepingCentre(size, size).toFloat();
-    float ang = 30.f;
-    size -= 6;
+        Path powerButton;
+        auto bounds = toggleButton.getLocalBounds();
+        auto size = juce::jmin(bounds.getWidth(), bounds.getHeight()) - 6;
 
-    powerButton.addCentredArc(rect.getCentreX(), rect.getCentreY(), size * 0.5, size * 0.5, 
-        0.f, degreesToRadians(ang), degreesToRadians(360.f - ang), true);
+        auto rect = bounds.withSizeKeepingCentre(size, size).toFloat();
+        float ang = 30.f;
+        size -= 6;
 
-    powerButton.startNewSubPath(rect.getCentreX(), rect.getY());
-    powerButton.lineTo(rect.getCentre());
+        powerButton.addCentredArc(rect.getCentreX(), rect.getCentreY(), size * 0.5, size * 0.5,
+            0.f, degreesToRadians(ang), degreesToRadians(360.f - ang), true);
 
-    PathStrokeType pst(2.f, PathStrokeType::JointStyle::curved);
-    auto colorButton = toggleButton.getToggleState() ? Colours::dimgrey : lightgreen;
-    g.setColour(colorButton);
-    g.drawEllipse(rect, 2.f);
-    g.strokePath(powerButton, pst);
+        powerButton.startNewSubPath(rect.getCentreX(), rect.getY());
+        powerButton.lineTo(rect.getCentre());
 
-    // + set up the hit test region for the buttons
+        PathStrokeType pst(2.f, PathStrokeType::JointStyle::curved);
+        auto colorButton = toggleButton.getToggleState() ? Colours::dimgrey : lightgreen;
+        g.setColour(colorButton);
+        g.drawEllipse(rect, 2.f);
+        g.strokePath(powerButton, pst);
 
+        // + set up the hit test region for the buttons
 
+    }
+
+    else if (auto* ab = dynamic_cast<AnalyzerButton*>(&toggleButton))
+    {
+        auto colorButton = ! toggleButton.getToggleState() ? Colours::dimgrey : lightgreen;
+        g.setColour(colorButton);
+        auto bounds = toggleButton.getLocalBounds();
+        g.drawRect(bounds);
+        auto insetRect = bounds.reduced(4);
+        
+        Path randomPath;
+        Random rand;
+        auto startY = insetRect.getY() + insetRect.getHeight() * rand.nextFloat();
+        randomPath.startNewSubPath(insetRect.getX(), startY);
+
+        for (auto x = insetRect.getX() +1; x < insetRect.getRight(); x+=2)
+        {
+            randomPath.lineTo(x, insetRect.getY() + insetRect.getHeight() * rand.nextFloat());
+        }
+        g.strokePath(randomPath, PathStrokeType(1.f));
+    }
 }
 
 
@@ -638,7 +661,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
     peakBypassButton.setLookAndFeel(&lnf);
     lowCutBypassButton.setLookAndFeel(&lnf);
     highCutBypassButton.setLookAndFeel(&lnf);
-
+    analyzerEnabledButton.setLookAndFeel(&lnf);
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -650,6 +673,8 @@ SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
     peakBypassButton.setLookAndFeel(nullptr);
     lowCutBypassButton.setLookAndFeel(nullptr);
     highCutBypassButton.setLookAndFeel(nullptr);
+    analyzerEnabledButton.setLookAndFeel(nullptr);
+
 }
 
 //==============================================================================
@@ -665,6 +690,13 @@ void SimpleEQAudioProcessorEditor::resized()
     // subcomponents in your editor..
     auto bounds = getLocalBounds();
     
+    auto analyzerEnabledArea = bounds.removeFromTop(25);
+    analyzerEnabledArea.setWidth(100);
+    analyzerEnabledArea.setX(5);
+    analyzerEnabledArea.removeFromTop(2);
+    analyzerEnabledButton.setBounds(analyzerEnabledArea);
+    bounds.removeFromTop(5);
+
     float hRatio = 25.f / 100.f;
     // hRatio = JUCE_LIVE_CONSTANT(33) / 100.f; //DEBUG 
     auto responseArea = bounds.removeFromTop(bounds.getHeight() * hRatio);
@@ -688,6 +720,8 @@ void SimpleEQAudioProcessorEditor::resized()
     peakFreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
     peakGainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
     peakQualitySlider.setBounds(bounds);
+
+
 
 }
 
