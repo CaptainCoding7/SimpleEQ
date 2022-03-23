@@ -13,9 +13,39 @@ const auto lightBlue = juce::Colour(50, 162, 168);
 const auto blue = juce::Colour(0, 0, 149);
 const auto lightpink = juce::Colours::pink;
 const auto pink = juce::Colour(255, 94, 174);
+const auto hotpink = juce::Colours::hotpink;
 const auto lightgreen = juce::Colour(118, 239, 154);
+const auto cyan = juce::Colour(0, 255, 204);
+const auto darkblue = juce::Colour(0, 0, 150);
 
 /****************************** LookAndFeel Stuff *****************************/
+
+void LookAndFeel::drawSliderHand(juce::Graphics& g, juce::Rectangle<float> bounds, int textHeight,
+    float rotaryStartAngle, float rotaryEndAngle, float sliderPosProportional, float width, 
+    juce::Colour colour, juce::Colour colour2, bool enabled)
+{
+    using namespace juce;
+
+    auto center = bounds.getCentre();
+    Path path;
+    Rectangle<float> rect;
+
+    rect.setLeft(center.getX() - width);
+    rect.setRight(center.getX() + width);
+    rect.setBottom(center.getY() - (float)textHeight);
+    rect.setTop(bounds.getY());
+
+    path.addRoundedRectangle(rect, 2.f);
+
+    jassert(rotaryStartAngle < rotaryEndAngle);
+
+    auto sliderAngRad = jmap(sliderPosProportional, 0.f, 1.f, rotaryStartAngle, rotaryEndAngle);
+
+    path.applyTransform(AffineTransform().rotated(sliderAngRad, center.getX(), center.getY()));
+    g.setColour(enabled ? colour : colour2);
+    g.fillPath(path);
+}
+
 
 /* 
  * We need to use a class that inherits from LookAndFeel_VX in order to draw inside the slider bounds
@@ -34,9 +64,18 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
 
     /* Drawing a slider with colours */
     auto bounds = Rectangle<float>(x, y, width, height);
-    auto enabled = slider.isEnabled();
 
+    auto* rswl = dynamic_cast<RotarySliderWithLabels*>(&slider);
+    auto sliderBounds = rswl->getSliderBounds();
+    auto enabled = slider.isEnabled();
+    auto radius = sliderBounds.getWidth() * 0.5f;
+
+    juce::ColourGradient cg = ColourGradient(hotpink, bounds.getCentreX(), bounds.getCentreY(), lightBlue, 
+        bounds.getCentreX() + radius*0.7, bounds.getCentreY() + radius*0.7, true);
+    juce::ColourGradient cg_disabled = ColourGradient(Colours::darkgrey, bounds.getCentreX(), bounds.getCentreY(), Colours::lightgrey,
+        bounds.getCentreX() + radius * 0.7, bounds.getCentreY() + radius * 0.7, true);
     g.setColour(enabled ? lightBlue : Colours::darkgrey);
+    g.setGradientFill(enabled ? cg : cg_disabled);
     g.fillEllipse(bounds);
 
     g.setColour(enabled ? Colours::white : Colours::lightgrey);
@@ -48,42 +87,39 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
     if (auto* rswl = dynamic_cast<RotarySliderWithLabels*>(&slider))
     {
 
-        auto center = bounds.getCentre();
-        Path path;
-
         /* Creating the hand (aiguille) in the slider */
+        auto large_width = 3.f;
+        auto thin_width = 0.5f;
+        auto largeHeight = rswl->getTextHeight() * 1.5;
+        auto smallHeight = rswl->getTextHeight() * 1.7;
+        drawSliderHand(g, bounds, largeHeight, rotaryStartAngle, rotaryEndAngle, 
+            sliderPosProportional, large_width, blue, juce::Colours::lightgrey, enabled);
+        drawSliderHand(g, bounds, smallHeight, rotaryStartAngle, rotaryEndAngle, 
+            sliderPosProportional, thin_width, juce::Colours::white, juce::Colours::darkgrey, enabled);
+        /* We set the value text appearence */
 
         Rectangle<float> rect;
-
-        rect.setLeft(center.getX() - 2);
-        rect.setRight(center.getX() + 2);
-        rect.setBottom(center.getY() - rswl->getTextHeight() * 1.5);
-        rect.setTop(bounds.getY());
-
-        path.addRoundedRectangle(rect, 2.f);
-
-        jassert(rotaryStartAngle < rotaryEndAngle);
-
-        auto sliderAngRad = jmap(sliderPosProportional, 0.f, 1.f, rotaryStartAngle, rotaryEndAngle);
-
-        path.applyTransform(AffineTransform().rotated(sliderAngRad, center.getX(), center.getY()));
-        g.fillPath(path);
-
-        /* We set the value text appearence */
 
         g.setFont(rswl->getTextHeight());
         auto text = rswl->getDisplayString();
         auto strWidth = g.getCurrentFont().getStringWidth(text);
 
-        rect.setSize(strWidth + 4, rswl->getTextHeight() + 2);
+        rect.setSize(strWidth + 4,  rswl->getTextHeight() + 2);
         rect.setCentre(bounds.getCentre());
 
-        g.setColour(enabled ? Colours::black : Colours::darkgrey);
+        //auto c = JUCE_LIVE_CONSTANT(0.1f);
+        juce::ColourGradient cg = ColourGradient(hotpink, rect.getCentreX(), rect.getCentreY(), lightBlue,
+            rect.getCentreX() + rect.getWidth()*0.5f, rect.getCentreY() + rect.getHeight()*0.5f, true);
+        juce::ColourGradient cg_disabled = ColourGradient(Colours::darkgrey, bounds.getCentreX(), bounds.getCentreY(), Colours::lightgrey,
+            bounds.getCentreX() + radius * 0.7, bounds.getCentreY() + radius * 0.7, true);
+        g.setColour(enabled ? lightBlue : Colours::darkgrey);
+        //g.setGradientFill(enabled ? cg : cg_disabled);
+        //g.setColour(enabled ? Colours::hotpink : Colours::darkgrey);
+        g.drawRoundedRectangle(rect, 4.f, 1.4);
         g.fillRect(rect);
 
-        g.setColour(enabled ? Colours::white : Colours::lightgrey);
+        g.setColour(enabled ? Colours::black : Colours::lightgrey);
         g.drawFittedText(text, rect.toNearestInt(), juce::Justification::centred, 1);
-
 
     }
 }
@@ -111,7 +147,7 @@ void LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggle
         powerButton.lineTo(rect.getCentre());
 
         PathStrokeType pst(2.f, PathStrokeType::JointStyle::curved);
-        auto colorButton = toggleButton.getToggleState() ? Colours::dimgrey : lightgreen;
+        auto colorButton = toggleButton.getToggleState() ? Colours::dimgrey : cyan;
         g.setColour(colorButton);
         g.drawEllipse(rect, 2.f);
         g.strokePath(powerButton, pst);
@@ -122,7 +158,7 @@ void LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggle
 
     else if (auto* ab = dynamic_cast<AnalyzerButton*>(&toggleButton))
     {
-        auto colorButton = ! toggleButton.getToggleState() ? Colours::dimgrey : lightgreen;
+        auto colorButton = ! toggleButton.getToggleState() ? Colours::dimgrey : pink;
         g.setColour(colorButton);
         auto bounds = toggleButton.getLocalBounds();
         g.drawRect(bounds);
@@ -138,8 +174,8 @@ void RotarySliderWithLabels::paint(juce::Graphics& g)
 {
     using namespace juce;
 
-    auto startAng = degreesToRadians(180.f + 45.f);
-    auto endAng = degreesToRadians(180.f - 45.f) + MathConstants<float>::twoPi;
+    auto startAng = degreesToRadians(180.f + 55.f);
+    auto endAng = degreesToRadians(180.f - 55.f) + MathConstants<float>::twoPi;
     auto range = getRange();
 
     auto sliderBounds = getSliderBounds();
@@ -164,10 +200,11 @@ void RotarySliderWithLabels::paint(juce::Graphics& g)
     auto center = sliderBounds.toFloat().getCentre();
     auto radius = sliderBounds.getWidth() * 0.5f;
 
-    g.setColour(Colour(0, 255, 204));
     g.setFont(getTextHeight());
 
     auto numchoices = labels.size();
+    auto enabled = this->isEnabled();
+
     for (int i = 0; i < numchoices; i++) {
         auto pos = labels[i].pos;
         jassert(pos <= 1.f);
@@ -176,15 +213,41 @@ void RotarySliderWithLabels::paint(juce::Graphics& g)
         // We place the text of the min/max labels just below the circle defining the slider,
         // near the corners of the slider box bounds
         auto ang = jmap(pos, 0.f, 1.f, startAng, endAng);
-        auto c = center.getPointOnCircumference(radius + getTextHeight() * 0.5f + 1, ang);
-
         Rectangle<float> rect;
         auto str = labels[i].label;
+        float coeff, dist;
+
+        // if it's a slider title:
+        if (labels[i].pos == 0.5f)
+        {
+            g.setColour(enabled ? Colours::hotpink : Colours::lightgrey);
+            //coeff = JUCE_LIVE_CONSTANT(1.f);
+            coeff = -0.78f;
+            dist = (radius + getTextHeight()) * coeff;//* 4.2f + 1;
+        }
+        else
+        {
+            g.setColour(enabled ? cyan : Colours::lightgrey);
+            dist = radius + getTextHeight() * 0.6f + 1;
+
+        }
+        auto c = center.getPointOnCircumference(dist, ang);
         rect.setSize(g.getCurrentFont().getStringWidth(str), getTextHeight());
         rect.setCentre(c);
         rect.setY(rect.getY() + getTextHeight());
-
         g.drawFittedText(str, rect.toNearestInt(), juce::Justification::centred, 1);
+
+        /*
+        //Slider titles
+        rect.setSize(30, 10);
+        c = center.getPointOnCircumference(radius + getTextHeight() * 0.5f + 5, MathConstants<float>::pi);//degreesToRadians(90));
+        rect.setCentre(c);
+        //g.setColour(juce::Colours::black);
+        //g.fillRect(rect);
+
+        g.setColour(juce::Colours::hotpink);
+        g.drawFittedText("test", rect.toNearestInt(), juce::Justification::centred, 1);
+        */
     }
 
         
@@ -375,8 +438,9 @@ void ResponseCurveComponent::updateChain() {
 
 void ResponseCurveComponent::paint(juce::Graphics& g)
 {
+    auto bounds = getLocalBounds();
     g.fillAll(juce::Colours::black);
-    g.drawImage(background, getLocalBounds().toFloat());
+    g.drawImage(background, bounds.toFloat());
 
     auto responseArea = getAnalysisArea();
     auto width = responseArea.getWidth();
@@ -449,16 +513,16 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
         //paint the FFT Spectrum
         auto leftChannelFFTPath = leftPathProducer.getPath();
         leftChannelFFTPath.applyTransform(juce::AffineTransform().translation(responseArea.getX(), responseArea.getY()));
-        g.setColour(pink);
+        g.setColour(lightpink);
         g.strokePath(leftChannelFFTPath, juce::PathStrokeType(1.f));
 
         auto rightChannelFFTPath = rightPathProducer.getPath();
         rightChannelFFTPath.applyTransform(juce::AffineTransform().translation(responseArea.getX(), responseArea.getY()));
-        g.setColour(lightpink);
+        g.setColour(pink);
         g.strokePath(rightChannelFFTPath, juce::PathStrokeType(1.f));
     }
 
-    g.setColour(blue);
+    g.setColour(lightBlue);
     g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 1.4);
 
     g.setColour(juce::Colours::white);
@@ -476,9 +540,9 @@ void ResponseCurveComponent::resized()
 
     Array<float> freqs
     {
-        20, /*30, 40,*/ 50, 100,
-        200, /*300, 400,*/ 500, 1000,
-        2000, /*3000, 4000,*/ 5000, 10000,
+        20, 30, /*40,*/ 50, 100,
+        200, 300, /*400,*/ 500, 1000,
+        2000, 3000, /*4000,*/ 5000, 10000,
         20000
     };
 
@@ -630,25 +694,32 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 {
 
     peakFreqSlider.labels.add({ 0.f, "20Hz" });
+    peakFreqSlider.labels.add({ 0.5f, "Peak Freq" });
     peakFreqSlider.labels.add({ 1.f, "20kHz" });
 
     peakGainSlider.labels.add({ 0.f, "-24dB" });
+    peakGainSlider.labels.add({ 0.5f, "Peak Gain" });
     peakGainSlider.labels.add({ 1.f, "+24dB" });
 
     peakQualitySlider.labels.add({ 0.f, "0.1" });
+    peakQualitySlider.labels.add({ 0.5f, "Peak Quality" });
     peakQualitySlider.labels.add({ 1.f, "10.0" });
 
     lowCutFreqSlider.labels.add({ 0.f, "20Hz" });
+    lowCutFreqSlider.labels.add({ 0.5f, "Low Cut Freq" });
     lowCutFreqSlider.labels.add({ 1.f, "20kHz" });
 
     highCutFreqSlider.labels.add({ 0.f, "20Hz" });
+    highCutFreqSlider.labels.add({ 0.5f, "High Cut Freq" });
     highCutFreqSlider.labels.add({ 1.f, "20kHz" });
 
-    lowCutSlopeSlider.labels.add({ 0.f, "12dB/Oct" });
-    lowCutSlopeSlider.labels.add({ 1.f, "48dB/Oct" });
+    lowCutSlopeSlider.labels.add({ 0.f, "12" });
+    lowCutSlopeSlider.labels.add({ 0.5f, "Low Cut Slope" });
+    lowCutSlopeSlider.labels.add({ 1.f, "48" });
 
-    highCutSlopeSlider.labels.add({ 0.f, "12dB/Oct" });
-    highCutSlopeSlider.labels.add({ 1.f, "48dB/Oct" });
+    highCutSlopeSlider.labels.add({ 0.f, "12" });
+    highCutSlopeSlider.labels.add({ 0.5f, "High Cut Slope" });
+    highCutSlopeSlider.labels.add({ 1.f, "48" });
 
     for (auto* comp : getComps())
     {
@@ -704,7 +775,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (600, 480);
+    setSize(700, 600);
 }
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
@@ -719,7 +790,13 @@ SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 //==============================================================================
 void SimpleEQAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll(juce::Colours::black);
+    //g.fillAll(juce::Colours::black);
+
+    auto bounds = getLocalBounds();
+    juce::ColourGradient cg = juce::ColourGradient(juce::Colours::black, bounds.getTopLeft().getX(), bounds.getTopLeft().getY(), 
+        darkblue, bounds.getBottomRight().getX(), bounds.getBottomRight().getY(), true);
+    g.setGradientFill(cg);
+    g.fillAll();
 
 }
 
@@ -729,6 +806,7 @@ void SimpleEQAudioProcessorEditor::resized()
     // subcomponents in your editor..
     auto bounds = getLocalBounds();
     
+    /* Spectrum area */
     auto analyzerEnabledArea = bounds.removeFromTop(25);
     analyzerEnabledArea.setWidth(100);
     analyzerEnabledArea.setX(5);
@@ -736,30 +814,28 @@ void SimpleEQAudioProcessorEditor::resized()
     analyzerEnabledButton.setBounds(analyzerEnabledArea);
     bounds.removeFromTop(5);
 
-    float hRatio = 25.f / 100.f;
-    // hRatio = JUCE_LIVE_CONSTANT(33) / 100.f; //DEBUG 
+    float hRatio = 40.f / 100.f;
+    //float hRatio = JUCE_LIVE_CONSTANT(33) / 100.f; //DEBUG 
     auto responseArea = bounds.removeFromTop(bounds.getHeight() * hRatio);
-
     rcc.setBounds(responseArea);
-
     bounds.removeFromTop(5);
 
+    /* sliders and bypass buttons areas */
     auto lowCutArea = bounds.removeFromLeft(bounds.getWidth() * 0.33);
     auto highCutArea = bounds.removeFromRight(bounds.getWidth() * 0.5);
 
     lowCutBypassButton.setBounds(lowCutArea.removeFromTop(25));
     lowCutFreqSlider.setBounds(lowCutArea.removeFromTop(lowCutArea.getHeight()*0.5));
-    lowCutSlopeSlider.setBounds(lowCutArea);
+    lowCutSlopeSlider.setBounds(lowCutArea.removeFromTop(lowCutArea.getHeight() * 0.8));
 
     highCutBypassButton.setBounds(highCutArea.removeFromTop(25));
     highCutFreqSlider.setBounds(highCutArea.removeFromTop(highCutArea.getHeight() * 0.5));
-    highCutSlopeSlider.setBounds(highCutArea);
+    highCutSlopeSlider.setBounds(highCutArea.removeFromTop(highCutArea.getHeight() * 0.8));
 
     peakBypassButton.setBounds(bounds.removeFromTop(25));
     peakFreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
     peakGainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
     peakQualitySlider.setBounds(bounds);
-
 
 
 }

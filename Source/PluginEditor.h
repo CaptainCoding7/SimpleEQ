@@ -11,6 +11,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
+/*******************************  FFT Spectrum classes *******************************/
 
 enum FFTOrder
 {
@@ -136,8 +137,13 @@ private:
 
 };
 
+
 struct LookAndFeel : juce::LookAndFeel_V4 
 {
+
+    void drawSliderHand(juce::Graphics& g, juce::Rectangle<float> bounds, int textHeight,
+        float rotaryStartAngle, float rotaryEndAngle, float sliderPosProportional, float width, 
+        juce::Colour colour, juce::Colour colour2, bool enabled);
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,
         float sliderPosProportional, float rotaryStartAngle,
         float rotaryEndAngle, juce::Slider&) override;
@@ -145,6 +151,9 @@ struct LookAndFeel : juce::LookAndFeel_V4
     void drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggleButon, 
         bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 };
+
+
+/**************************************  Slider components *************************************/
 
 struct RotarySliderWithLabels : juce::Slider 
 {
@@ -296,10 +305,10 @@ private:
     SimpleEQAudioProcessor& audioProcessor;
 
     RotarySliderWithLabels peakFreqSlider,
-                       peakGainSlider,
-                       peakQualitySlider,
-                       lowCutFreqSlider,
-                       highCutFreqSlider,
+        peakGainSlider,
+        peakQualitySlider,
+        lowCutFreqSlider,
+        highCutFreqSlider,
                        lowCutSlopeSlider,
                        highCutSlopeSlider;
 
