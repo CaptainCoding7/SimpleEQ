@@ -1,6 +1,6 @@
 # SimpleEQ
 
-A C++ implementation of a simple Equalizer using the Juce framework.<br>
+A C++ implementation of a simple Equalizer using the Juce framework.<br><br>
 ![image](https://user-images.githubusercontent.com/46071575/175785148-7017bdc7-2b1d-4c9b-9fa7-b7cf09bfceb0.png)
 <br>
 
